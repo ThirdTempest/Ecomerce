@@ -200,52 +200,11 @@ class ShopController extends Controller
         Session::put('cart', $cart);
         return redirect()->route('cart.view')->with('success', $product->name . ' added to cart!');
     }
-    
-    /**
-     * Handle updating product quantity in the session cart.
-     */
-    public function updateCartQuantity(Request $request)
-    {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer', // Changed to allow quantity 0 which is handled below
-        ]);
-
-        $productId = $request->product_id;
-        $newQuantity = $request->quantity;
-        $productName = '';
-
-        if (Session::has('cart')) {
-            $cart = Session::get('cart');
-            
-            if (isset($cart[$productId])) {
-                $productName = $cart[$productId]['name'];
-                
-                // CRITICAL FIX: If quantity is 0 or less, remove the item
-                if ($newQuantity <= 0) {
-                    unset($cart[$productId]);
-                    $message = $productName . ' was removed from your cart.';
-                } else {
-                    // Update quantity
-                    $cart[$productId]['quantity'] = $newQuantity;
-                    $message = $productName . ' quantity updated to ' . $newQuantity . '.';
-                }
-                
-                Session::put('cart', $cart);
-                return redirect()->route('cart.view')->with('success', $message);
-            }
-        }
-        
-        return redirect()->route('cart.view')->with('error', 'Item not found in cart.');
-    }
-
-
     public function removeFromCart(Request $request)
     {
         $request->validate(['product_id' => 'required|exists:products,id']);
         $productId = $request->product_id;
         $productName = '';
-
         if (Session::has('cart')) {
             $cart = Session::get('cart');
             if (isset($cart[$productId])) {
@@ -301,12 +260,10 @@ class ShopController extends Controller
             return redirect()->route('shop')->with('error', 'Your cart is empty or you are not logged in.'); 
         }
         
-        // FIX: Re-enabling explicit validation for data integrity
         $validated = $request->validate([
             'name' => 'required|string|max:255', 
-            // FIX: Allow email validation to pass if the field contains a valid email
             'email' => 'required|email|max:255', 
-            'phone' => ['required', 'string', 'max:15', 'regex:/^(09|\+639)\d{9}$/'], // Applying stricter Philippine phone validation
+            'phone' => 'required|string|max:15', 
             'line1' => 'required|string|max:255', 
             'city' => 'required|string|max:100', 
             'postal_code' => 'required|string|max:10', 
@@ -328,10 +285,9 @@ class ShopController extends Controller
         foreach ($cart as $item) { 
             $lineItems[] = [ 
                 'currency' => 'PHP', 
-                // FIX: Send UNIT PRICE in centavos. PayMongo multiplies by quantity.
-                'amount' => intval(round($item['price'] * 100)), 
+                'amount' => intval(round($item['price'] * $item['quantity'] * 100)), // Item price * quantity in centavos
                 'name' => $item['name'], 
-                'quantity' => (int)$item['quantity'], 
+                'quantity' => $item['quantity'], 
             ]; 
         }
         
@@ -400,7 +356,7 @@ class ShopController extends Controller
             \Log::error("PayMongo API Error: " . $response->body());
             
             // Fail gracefully (Redirect back to shipping form)
-            return back()->withErrors(['api' => 'Payment processor error: ' . ($response->json('errors.0.detail') ?? 'Unknown API error.')])
+            return back()->withErrors(['api' => 'Payment processor error. Check logs for details.'])
                         ->withInput();
 
         } catch (\Exception $e) {
@@ -416,26 +372,9 @@ class ShopController extends Controller
     {
         $orderData = Session::pull('pending_order_data');
         if (!$orderData) { return redirect()->route('profile')->with('error', 'Checkout session expired or data missing.'); }
-        
-        // FIX: Retrieve total_amount from $orderData array
-        $totalAmount = $orderData['total_amount']; 
-        
-        $order = Order::create([ 
-            'user_id' => $orderData['user_id'], 
-            'order_number' => 'ESHOP-' . time() . Str::random(4), 
-            'total_amount' => $totalAmount, // Use retrieved variable
-            'shipping_address' => $orderData['shipping_address'], 
-            'billing_address' => $orderData['billing_address'], 
-            'status' => 'processing', 
-        ]);
-        
+        $order = Order::create([ 'user_id' => $orderData['user_id'], 'order_number' => 'ESHOP-' . time() . Str::random(4), 'total_amount' => $orderData['total_amount'], 'shipping_address' => $orderData['shipping_address'], 'billing_address' => $orderData['billing_address'], 'status' => 'processing', ]);
         foreach ($orderData['cart_items'] as $productId => $item) {
-             OrderDetail::create([ 
-                 'order_id' => $order->id, 
-                 'product_id' => $item['id'], 
-                 'quantity' => $item['quantity'], 
-                 'price_at_purchase' => $item['price'], 
-            ]);
+             OrderDetail::create([ 'order_id' => $order->id, 'product_id' => $item['id'], 'quantity' => $item['quantity'], 'price_at_purchase' => $item['price'], ]);
         }
         Session::forget('cart');
         return view('cart.success')->with(['mock_order_number' => $order->order_number]);

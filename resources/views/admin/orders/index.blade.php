@@ -36,11 +36,8 @@
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse ($orders as $order)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <!-- NEW LINK TO ORDER DETAIL PAGE -->
-                                <a href="{{ route('admin.orders.show', $order) }}" class="text-primary hover:underline">
-                                    {{ $order->order_number }}
-                                </a>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {{ $order->order_number }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                                 {{ $order->user->name ?? 'Guest' }} <br>
@@ -53,14 +50,12 @@
                                 {{ $order->created_at->format('M d, Y') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST" class="flex items-center">
+                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST" class="flex items-center space-x-2">
                                     @csrf
                                     @method('PUT')
                                     
-                                    <!-- AUTO-SUBMIT ON CHANGE -->
                                     <select name="status" id="status-{{ $order->id }}" 
-                                        onchange="this.form.submit()"
-                                        class="py-1 px-2 border rounded-lg text-sm focus:ring-primary focus:border-primary w-full max-w-[150px]
+                                        class="py-1 px-2 border rounded-lg text-sm focus:ring-primary focus:border-primary w-full max-w-[120px]
                                             @if($order->status === 'pending' || $order->status === 'processing') border-yellow-400 bg-yellow-50 dark:bg-yellow-900/50 dark:text-yellow-300
                                             @elseif($order->status === 'shipped') border-blue-400 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-300
                                             @elseif($order->status === 'completed') border-green-400 bg-green-50 dark:bg-green-900/50 dark:text-green-300
@@ -75,7 +70,9 @@
                                         <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                                     </select>
                                     
-                                    <!-- REMOVED UPDATE BUTTON -->
+                                    <button type="submit" class="bg-primary text-white text-xs font-semibold py-1 px-3 rounded-lg hover:bg-green-700 transition duration-150">
+                                        Update
+                                    </button>
                                 </form>
                             </td>
                         </tr>
