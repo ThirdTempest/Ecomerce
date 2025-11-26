@@ -60,6 +60,8 @@ PAYMONGO_PAYMENT_METHOD_TYPES=gcash,paymaya,card
 
 import the ecommerce.sql into database.
 
+composer require paymongo/paymongo-php
+
 php artisan storage:link
 
 php artisan serve
