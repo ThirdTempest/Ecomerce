@@ -48,13 +48,27 @@
                             </span>
                         </div>
                         
-                        <!-- Action Button (Form) -->
+                        <!-- Stock Indicator (NEW) -->
+                        @if ($product->stock <= 0)
+                            <p class="text-xs font-semibold text-red-600 dark:text-red-400 mt-1">OUT OF STOCK</p>
+                        @elseif ($product->stock <= 5)
+                            <p class="text-xs font-semibold text-yellow-600 dark:text-yellow-400 mt-1">Low Stock ({{ $product->stock }})</p>
+                        @endif
+
+                        <!-- Action Button (Form) - Implements Stock Check -->
                         <form action="{{ route('cart.add') }}" method="POST" class="mt-4"> 
                             @csrf
                             <input type="hidden" name="product_id" value="{{ $product->id }}">
-                            <button type="submit" class="w-full bg-primary text-white text-base py-2 px-4 rounded-full hover:bg-green-700 transition duration-300 shadow-md">
-                                Add to Cart
-                            </button>
+                            
+                            @if ($product->stock > 0)
+                                <button type="submit" class="w-full bg-primary text-white text-base py-2 px-4 rounded-full hover:bg-green-700 transition duration-300 shadow-md">
+                                    Add to Cart
+                                </button>
+                            @else
+                                <button type="button" disabled class="w-full bg-gray-400 text-white text-base py-2 px-4 rounded-full shadow-md cursor-not-allowed">
+                                    Out of Stock
+                                </button>
+                            @endif
                         </form>
                     </div>
                 </div>
